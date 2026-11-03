@@ -6,7 +6,6 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/aya-zid/orderflow/internal/notification/repository"
 	"github.com/aya-zid/orderflow/pkg/events"
 )
 
