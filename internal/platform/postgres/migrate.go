@@ -74,7 +74,7 @@ func applyMigration(ctx context.Context, pool *pgxpool.Pool, version, body strin
 	if err != nil {
 		return fmt.Errorf("begin migration %s: %w", version, err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	if _, err := tx.Exec(ctx, body); err != nil {
 		return fmt.Errorf("execute migration %s: %w", version, err)

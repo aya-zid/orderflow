@@ -47,7 +47,7 @@ func (r *Repository) ProcessWithOutbox(
 	if err != nil {
 		return Result{}, fmt.Errorf("begin payment: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	duplicate, err := markProcessed(ctx, tx, env.EventID)
 	if err != nil {

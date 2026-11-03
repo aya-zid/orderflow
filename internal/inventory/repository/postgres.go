@@ -47,7 +47,7 @@ func (r *Repository) ReserveWithOutbox(ctx context.Context, env events.Envelope,
 	if err != nil {
 		return ReservationResult{}, fmt.Errorf("begin reservation: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	if _, err := tx.Exec(ctx,
 		`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
@@ -166,7 +166,7 @@ func (r *Repository) ReleaseWithOutbox(ctx context.Context, env events.Envelope,
 	if err != nil {
 		return false, fmt.Errorf("begin release: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	if _, err := tx.Exec(ctx,
 		`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,

@@ -28,13 +28,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("connect: %v", err)
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	ch, err := conn.Channel()
 	if err != nil {
 		log.Fatalf("channel: %v", err)
 	}
-	defer ch.Close()
+	defer func() { _ = ch.Close() }()
 
 	if err := ch.ExchangeDeclare(*exchange, "topic", true, false, false, false, nil); err != nil {
 		log.Fatalf("declare exchange: %v", err)

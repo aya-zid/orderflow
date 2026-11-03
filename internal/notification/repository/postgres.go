@@ -29,7 +29,7 @@ func (r *Repository) Store(ctx context.Context, env events.Envelope, orderID, no
 	if err != nil {
 		return false, fmt.Errorf("begin notification: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO processed_events (consumer, event_id)

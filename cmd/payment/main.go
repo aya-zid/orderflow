@@ -58,13 +58,13 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	publisher, err := rabbitmq.NewPublisher(conn, cfg.Exchange, log)
 	if err != nil {
 		return err
 	}
-	defer publisher.Close()
+	defer func() { _ = publisher.Close() }()
 
 	repo := repository.New(pool)
 	service := app.New(repo, cfg.PaymentFailureRate, log)
@@ -106,7 +106,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	defer consumer.Close()
+	defer func() { _ = consumer.Close() }()
 
 	wg.Add(1)
 	go func() {

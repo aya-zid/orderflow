@@ -44,7 +44,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	defer redisClient.Close()
+	defer func() { _ = redisClient.Close() }()
 
 	gw, err := gateway.New(cfg.OrderServiceURL, redisClient, cfg.RateLimitPerMinute, log)
 	if err != nil {
@@ -65,7 +65,7 @@ func run() error {
 			if err != nil {
 				return err
 			}
-			defer response.Body.Close()
+			defer func() { _ = response.Body.Close() }()
 			if response.StatusCode != http.StatusOK {
 				return fmt.Errorf("order service returned %d", response.StatusCode)
 			}

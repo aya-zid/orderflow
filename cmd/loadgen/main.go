@@ -69,7 +69,7 @@ func main() {
 				atomic.AddInt64(&failed, 1)
 				return
 			}
-			defer response.Body.Close()
+			defer func() { _ = response.Body.Close() }()
 
 			if response.StatusCode >= 300 {
 				atomic.AddInt64(&failed, 1)

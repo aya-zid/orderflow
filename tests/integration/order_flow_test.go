@@ -40,7 +40,7 @@ func requireStack(t *testing.T) {
 	if err != nil {
 		t.Skipf("stack is not reachable: %v", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 
 	if response.StatusCode != http.StatusOK {
 		t.Skipf("gateway is not ready: status %d", response.StatusCode)
@@ -74,7 +74,7 @@ func createOrder(t *testing.T, idempotencyKey, sku string) (orderResponse, int) 
 	if err != nil {
 		t.Fatalf("create order: %v", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 
 	var order orderResponse
 	if response.StatusCode == http.StatusCreated {
@@ -92,7 +92,7 @@ func getOrder(t *testing.T, orderID string) (orderResponse, int) {
 	if err != nil {
 		t.Fatalf("get order: %v", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 
 	var order orderResponse
 	if response.StatusCode == http.StatusOK {
@@ -174,7 +174,7 @@ func TestCreateRequiresIdempotencyKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create order: %v", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 
 	if response.StatusCode != http.StatusBadRequest {
 		t.Fatalf("expected 400 without Idempotency-Key, got %d", response.StatusCode)
@@ -197,7 +197,7 @@ func TestCancelUnknownOrder(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cancel order: %v", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 
 	if response.StatusCode != http.StatusNotFound {
 		t.Fatalf("expected 404 for unknown order, got %d", response.StatusCode)

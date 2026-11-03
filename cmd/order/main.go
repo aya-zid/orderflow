@@ -60,19 +60,19 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	publisher, err := rabbitmq.NewPublisher(conn, cfg.Exchange, log)
 	if err != nil {
 		return err
 	}
-	defer publisher.Close()
+	defer func() { _ = publisher.Close() }()
 
 	redisClient, err := platformredis.New(ctx, cfg.RedisURL)
 	if err != nil {
 		return err
 	}
-	defer redisClient.Close()
+	defer func() { _ = redisClient.Close() }()
 
 	repo := repository.New(pool)
 	service := app.New(repo, log, m)
@@ -121,7 +121,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	defer inventoryConsumer.Close()
+	defer func() { _ = inventoryConsumer.Close() }()
 
 	paymentConsumer, err := rabbitmq.NewConsumer(
 		conn,
@@ -146,7 +146,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	defer paymentConsumer.Close()
+	defer func() { _ = paymentConsumer.Close() }()
 
 	runConsumer := func(consumer *rabbitmq.Consumer) {
 		wg.Add(1)

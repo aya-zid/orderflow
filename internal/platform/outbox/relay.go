@@ -76,7 +76,7 @@ func (r *Relay) publishBatch(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("begin outbox tx: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	rows, err := tx.Query(ctx, `
 		SELECT id, payload

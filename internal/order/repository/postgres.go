@@ -33,7 +33,7 @@ func (r *Repository) CreateWithOutbox(ctx context.Context, order *domain.Order, 
 	if err != nil {
 		return fmt.Errorf("begin create order: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	_, err = tx.Exec(ctx, `
 		INSERT INTO orders
@@ -170,7 +170,7 @@ func (r *Repository) UpdateStatusWithOutbox(ctx context.Context, id string, targ
 	if err != nil {
 		return nil, fmt.Errorf("begin status update: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	current, err := lockStatus(ctx, tx, id)
 	if err != nil {
@@ -209,7 +209,7 @@ func (r *Repository) ApplyEvent(
 	if err != nil {
 		return nil, fmt.Errorf("begin apply event: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO processed_events (consumer, event_id)

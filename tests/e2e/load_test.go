@@ -33,7 +33,7 @@ func requireStack(t *testing.T) {
 	if err != nil {
 		t.Skipf("stack is not reachable: %v", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 
 	if response.StatusCode != http.StatusOK {
 		t.Skipf("gateway is not ready: status %d", response.StatusCode)
@@ -91,7 +91,7 @@ func TestConcurrentOrdersReachTerminalState(t *testing.T) {
 				atomic.AddInt64(&rejected, 1)
 				return
 			}
-			defer response.Body.Close()
+			defer func() { _ = response.Body.Close() }()
 
 			if response.StatusCode != http.StatusCreated {
 				atomic.AddInt64(&rejected, 1)

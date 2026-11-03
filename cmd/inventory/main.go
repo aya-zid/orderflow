@@ -58,13 +58,13 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	publisher, err := rabbitmq.NewPublisher(conn, cfg.Exchange, log)
 	if err != nil {
 		return err
 	}
-	defer publisher.Close()
+	defer func() { _ = publisher.Close() }()
 
 	repo := repository.New(pool)
 	service := app.New(repo, log, m)
@@ -106,7 +106,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	defer orderCreatedConsumer.Close()
+	defer func() { _ = orderCreatedConsumer.Close() }()
 
 	orderCancelledConsumer, err := rabbitmq.NewConsumer(
 		conn,
@@ -127,7 +127,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	defer orderCancelledConsumer.Close()
+	defer func() { _ = orderCancelledConsumer.Close() }()
 
 	runConsumer := func(consumer *rabbitmq.Consumer) {
 		wg.Add(1)

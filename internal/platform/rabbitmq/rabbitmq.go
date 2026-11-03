@@ -24,7 +24,7 @@ var ErrPermanent = errors.New("permanent event error")
 
 // Permanent wraps err so the consumer sends the message straight to the DLQ.
 func Permanent(err error) error {
-	return fmt.Errorf("%w: %v", ErrPermanent, err)
+	return fmt.Errorf("%w: %w", ErrPermanent, err)
 }
 
 func isPermanent(err error) bool {
