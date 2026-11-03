@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: orderflow
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secret.yaml
+  - infra.yaml
+  - services.yaml
+  - hpa.yaml
+  - networkpolicy.yaml
+
+commonLabels:
+  app.kubernetes.io/part-of: orderflow
+  app.kubernetes.io/managed-by: kustomize

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: orderflow-config
+  namespace: orderflow
+data:
+  ENV: production
+  LOG_LEVEL: info
+  RABBITMQ_EXCHANGE: orderflow.events
+  RABBITMQ_URL: amqp://orderflow:change-me@rabbitmq:5672/
+  REDIS_URL: redis://redis:6379/0
+  ORDER_SERVICE_URL: http://order:8081
+  RETRY_TTL: 5s
+  MAX_RETRIES: "3"
+  OUTBOX_INTERVAL: 500ms
+  PAYMENT_FAILURE_RATE: "0.1"
+  RATE_LIMIT_PER_MINUTE: "120"

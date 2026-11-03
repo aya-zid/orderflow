@@ -1,0 +1,31 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: orderflow
+
+resources:
+  - ../..
+
+images:
+  - name: orderflow/gateway
+    newTag: dev
+  - name: orderflow/order
+    newTag: dev
+  - name: orderflow/inventory
+    newTag: dev
+  - name: orderflow/payment
+    newTag: dev
+  - name: orderflow/notification
+    newTag: dev
+
+replicas:
+  - name: gateway
+    count: 1
+  - name: order
+    count: 1
+  - name: inventory
+    count: 1
+  - name: payment
+    count: 1
+  - name: notification
+    count: 1

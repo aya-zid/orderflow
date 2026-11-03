@@ -1,0 +1,222 @@
+name: orderflow
+
+x-service-env: &service-env
+  ENV: development
+  LOG_LEVEL: info
+  RABBITMQ_URL: amqp://${RABBITMQ_USER:-orderflow}:${RABBITMQ_PASSWORD:-orderflow}@rabbitmq:5672/
+  RABBITMQ_EXCHANGE: ${RABBITMQ_EXCHANGE:-orderflow.events}
+  RETRY_TTL: 5s
+  MAX_RETRIES: "3"
+  OUTBOX_INTERVAL: 500ms
+
+x-service-build: &service-build
+  context: ../..
+  dockerfile: deploy/docker/Dockerfile
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: orderflow-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-orderflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-orderflow}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres-init.sql:/docker-entrypoint-initdb.d/001-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-orderflow} -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [orderflow]
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: orderflow-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-orderflow}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-orderflow}
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [orderflow]
+
+  redis:
+    image: redis:7-alpine
+    container_name: orderflow-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [orderflow]
+
+  order:
+    build:
+      <<: *service-build
+      args:
+        SERVICE: order
+    container_name: orderflow-order
+    environment:
+      <<: *service-env
+      HTTP_PORT: "8081"
+      DB_URL: postgres://${POSTGRES_USER:-orderflow}:${POSTGRES_PASSWORD:-orderflow}@postgres:5432/order_db?sslmode=disable
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "${ORDER_PORT:-8081}:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [orderflow]
+
+  inventory:
+    build:
+      <<: *service-build
+      args:
+        SERVICE: inventory
+    container_name: orderflow-inventory
+    environment:
+      <<: *service-env
+      HTTP_PORT: "8082"
+      DB_URL: postgres://${POSTGRES_USER:-orderflow}:${POSTGRES_PASSWORD:-orderflow}@postgres:5432/inventory_db?sslmode=disable
+    ports:
+      - "${INVENTORY_PORT:-8082}:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks: [orderflow]
+
+  payment:
+    build:
+      <<: *service-build
+      args:
+        SERVICE: payment
+    container_name: orderflow-payment
+    environment:
+      <<: *service-env
+      HTTP_PORT: "8083"
+      DB_URL: postgres://${POSTGRES_USER:-orderflow}:${POSTGRES_PASSWORD:-orderflow}@postgres:5432/payment_db?sslmode=disable
+      PAYMENT_FAILURE_RATE: ${PAYMENT_FAILURE_RATE:-0.1}
+    ports:
+      - "${PAYMENT_PORT:-8083}:8083"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks: [orderflow]
+
+  notification:
+    build:
+      <<: *service-build
+      args:
+        SERVICE: notification
+    container_name: orderflow-notification
+    environment:
+      <<: *service-env
+      HTTP_PORT: "8084"
+      DB_URL: postgres://${POSTGRES_USER:-orderflow}:${POSTGRES_PASSWORD:-orderflow}@postgres:5432/notification_db?sslmode=disable
+    ports:
+      - "${NOTIFICATION_PORT:-8084}:8084"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks: [orderflow]
+
+  gateway:
+    build:
+      <<: *service-build
+      args:
+        SERVICE: gateway
+    container_name: orderflow-gateway
+    environment:
+      <<: *service-env
+      HTTP_PORT: "8080"
+      REDIS_URL: redis://redis:6379/0
+      ORDER_SERVICE_URL: http://order:8081
+      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-120}
+    ports:
+      - "${GATEWAY_PORT:-8080}:8080"
+    depends_on:
+      order:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    networks: [orderflow]
+
+  swagger:
+    image: swaggerapi/swagger-ui:v5.17.14
+    container_name: orderflow-swagger
+    environment:
+      SWAGGER_JSON: /spec/openapi.yaml
+      BASE_URL: /docs
+    volumes:
+      - ../../api:/spec:ro
+    ports:
+      - "${SWAGGER_PORT:-8085}:8080"
+    networks: [orderflow]
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: orderflow-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks: [orderflow]
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: orderflow-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks: [orderflow]
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  orderflow:
+    driver: bridge

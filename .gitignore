@@ -1,0 +1,46 @@
+# Binaries
+bin/
+dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+orderflow
+
+# Test output
+coverage.out
+coverage.txt
+coverage.html
+*.test
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Docker
+deploy/docker/grafana/data/
+deploy/docker/prometheus/data/
+
+# Go workspace
+go.work
+go.work.sum
+
+# Local data
+tmp/
